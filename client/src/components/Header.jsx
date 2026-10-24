@@ -1,12 +1,18 @@
 import { useAuth } from "../context/AuthContext";
 
-export default function Header() {
+const PAGES = [
+  { key: "videos", label: "Videos", title: "Video Tracker", subtitle: "Thumbnails, Drive links & payment status" },
+  { key: "pdfs", label: "PDFs", title: "PDF Tracker", subtitle: "Cover image, name & puzzle count" },
+];
+
+export default function Header({ page, onPageChange }) {
   const { unlocked, lock, openPasskeyModal } = useAuth();
+  const current = PAGES.find((p) => p.key === page) || PAGES[0];
 
   return (
     <header className="sticky top-0 z-20 border-b border-gray-200/80 bg-white/85 backdrop-blur-md">
       <div className="h-1 w-full bg-gradient-to-r from-brand-green via-brand-blue to-brand-orange" />
-      <div className="mx-auto flex max-w-6xl items-center justify-between gap-3 px-4 py-3 sm:px-6">
+      <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3 px-4 py-3 sm:px-6">
         <div className="flex items-center gap-3">
           <img
             src="/logo.jpeg"
@@ -15,11 +21,27 @@ export default function Header() {
           />
           <div>
             <h1 className="brand-gradient-text text-lg font-extrabold tracking-tight sm:text-xl">
-              Video Tracker
+              {current.title}
             </h1>
-            <p className="hidden text-xs text-gray-500 sm:block">Thumbnails, Drive links &amp; payment status</p>
+            <p className="hidden text-xs text-gray-500 sm:block">{current.subtitle}</p>
           </div>
         </div>
+
+        <nav className="flex items-center gap-1 rounded-full bg-gray-100 p-1">
+          {PAGES.map((p) => (
+            <button
+              key={p.key}
+              onClick={() => onPageChange(p.key)}
+              className={`rounded-full px-3.5 py-1.5 text-sm font-medium transition ${
+                p.key === page
+                  ? "bg-white text-gray-900 shadow-sm"
+                  : "text-gray-500 hover:text-gray-700"
+              }`}
+            >
+              {p.label}
+            </button>
+          ))}
+        </nav>
 
         {unlocked ? (
           <div className="flex items-center gap-2">

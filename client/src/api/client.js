@@ -53,4 +53,19 @@ export const api = {
     }),
 
   deleteVideo: (id) => request(`/videos/${id}`, { method: "DELETE" }),
+
+  getPdfs: () => request("/pdfs"),
+
+  createPdf: (formData) => request("/pdfs", { method: "POST", body: formData }),
+
+  updatePdf: (id, formData) => request(`/pdfs/${id}`, { method: "PUT", body: formData }),
+
+  togglePdfPaid: (id, paid) =>
+    request(`/pdfs/${id}/paid`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ paid }),
+    }),
+
+  deletePdf: (id) => request(`/pdfs/${id}`, { method: "DELETE" }),
 };

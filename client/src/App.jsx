@@ -5,6 +5,8 @@ import Header from "./components/Header";
 import PasskeyModal from "./components/PasskeyModal";
 import VideoGrid from "./components/VideoGrid";
 import VideoFormModal from "./components/VideoFormModal";
+import PdfGrid from "./components/PdfGrid";
+import PdfFormModal from "./components/PdfFormModal";
 import ConfirmDialog from "./components/ConfirmDialog";
 
 // Cards without a video number (e.g. added before this field existed) sort last.
@@ -16,26 +18,48 @@ function byVideoNumberDesc(a, b) {
 
 function AppContent() {
   const { lock, openPasskeyModal } = useAuth();
+  const [page, setPage] = useState("videos"); // 'videos' | 'pdfs'
+
   const [videos, setVideos] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [loadError, setLoadError] = useState("");
+  const [videosLoading, setVideosLoading] = useState(true);
+  const [videosError, setVideosError] = useState("");
   const [formModal, setFormModal] = useState(null); // { mode: 'create' | 'edit', video? }
   const [deleteTarget, setDeleteTarget] = useState(null);
 
+  const [pdfs, setPdfs] = useState([]);
+  const [pdfsLoading, setPdfsLoading] = useState(true);
+  const [pdfsError, setPdfsError] = useState("");
+  const [pdfFormModal, setPdfFormModal] = useState(null); // { mode: 'create' | 'edit', pdf? }
+  const [pdfDeleteTarget, setPdfDeleteTarget] = useState(null);
+
   useEffect(() => {
     loadVideos();
+    loadPdfs();
   }, []);
 
   async function loadVideos() {
-    setLoading(true);
-    setLoadError("");
+    setVideosLoading(true);
+    setVideosError("");
     try {
       const data = await api.getVideos();
       setVideos(data);
     } catch (err) {
-      setLoadError(err.message || "Could not load videos.");
+      setVideosError(err.message || "Could not load videos.");
     } finally {
-      setLoading(false);
+      setVideosLoading(false);
+    }
+  }
+
+  async function loadPdfs() {
+    setPdfsLoading(true);
+    setPdfsError("");
+    try {
+      const data = await api.getPdfs();
+      setPdfs(data);
+    } catch (err) {
+      setPdfsError(err.message || "Could not load PDFs.");
+    } finally {
+      setPdfsLoading(false);
     }
   }
 
@@ -91,31 +115,103 @@ function AppContent() {
     }
   }
 
+  async function handlePdfFormSubmit(formData) {
+    try {
+      if (pdfFormModal.mode === "edit") {
+        const updated = await api.updatePdf(pdfFormModal.pdf._id, formData);
+        setPdfs((prev) => prev.map((p) => (p._id === updated._id ? updated : p)));
+      } else {
+        const created = await api.createPdf(formData);
+        setPdfs((prev) => [created, ...prev]);
+      }
+      setPdfFormModal(null);
+    } catch (err) {
+      handleAuthExpiry(err);
+    }
+  }
+
+  async function handleTogglePdfPaid(pdf) {
+    const previous = pdfs;
+    setPdfs((prev) => prev.map((p) => (p._id === pdf._id ? { ...p, paid: !p.paid } : p)));
+    try {
+      const updated = await api.togglePdfPaid(pdf._id, !pdf.paid);
+      setPdfs((prev) => prev.map((p) => (p._id === updated._id ? updated : p)));
+    } catch (err) {
+      setPdfs(previous);
+      try {
+        handleAuthExpiry(err);
+      } catch {
+        // already surfaced via passkey modal
+      }
+    }
+  }
+
+  async function handlePdfDelete() {
+    try {
+      await api.deletePdf(pdfDeleteTarget._id);
+      setPdfs((prev) => prev.filter((p) => p._id !== pdfDeleteTarget._id));
+      setPdfDeleteTarget(null);
+    } catch (err) {
+      handleAuthExpiry(err);
+    }
+  }
+
   return (
     <div className="min-h-screen">
-      <Header />
+      <Header page={page} onPageChange={setPage} />
       <main className="mx-auto max-w-6xl px-4 py-6 sm:px-6 sm:py-8">
-        {loading && (
-          <div className="flex flex-col items-center justify-center gap-3 py-20">
-            <div className="h-8 w-8 animate-spin rounded-full border-4 border-gray-200 border-t-brand-blue" />
-            <p className="text-sm text-gray-500">Loading videos...</p>
-          </div>
+        {page === "videos" && (
+          <>
+            {videosLoading && (
+              <div className="flex flex-col items-center justify-center gap-3 py-20">
+                <div className="h-8 w-8 animate-spin rounded-full border-4 border-gray-200 border-t-brand-blue" />
+                <p className="text-sm text-gray-500">Loading videos...</p>
+              </div>
+            )}
+
+            {!videosLoading && videosError && (
+              <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                {videosError}
+              </div>
+            )}
+
+            {!videosLoading && !videosError && (
+              <VideoGrid
+                videos={videos}
+                onAdd={() => setFormModal({ mode: "create" })}
+                onEdit={(video) => setFormModal({ mode: "edit", video })}
+                onDelete={(video) => setDeleteTarget(video)}
+                onTogglePaid={handleTogglePaid}
+              />
+            )}
+          </>
         )}
 
-        {!loading && loadError && (
-          <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-            {loadError}
-          </div>
-        )}
+        {page === "pdfs" && (
+          <>
+            {pdfsLoading && (
+              <div className="flex flex-col items-center justify-center gap-3 py-20">
+                <div className="h-8 w-8 animate-spin rounded-full border-4 border-gray-200 border-t-brand-blue" />
+                <p className="text-sm text-gray-500">Loading PDFs...</p>
+              </div>
+            )}
 
-        {!loading && !loadError && (
-          <VideoGrid
-            videos={videos}
-            onAdd={() => setFormModal({ mode: "create" })}
-            onEdit={(video) => setFormModal({ mode: "edit", video })}
-            onDelete={(video) => setDeleteTarget(video)}
-            onTogglePaid={handleTogglePaid}
-          />
+            {!pdfsLoading && pdfsError && (
+              <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                {pdfsError}
+              </div>
+            )}
+
+            {!pdfsLoading && !pdfsError && (
+              <PdfGrid
+                pdfs={pdfs}
+                onAdd={() => setPdfFormModal({ mode: "create" })}
+                onEdit={(pdf) => setPdfFormModal({ mode: "edit", pdf })}
+                onDelete={(pdf) => setPdfDeleteTarget(pdf)}
+                onTogglePaid={handleTogglePdfPaid}
+              />
+            )}
+          </>
         )}
       </main>
 
@@ -140,6 +236,23 @@ function AppContent() {
           message="Remove this video and its thumbnail? This can't be undone."
           onConfirm={handleDelete}
           onClose={() => setDeleteTarget(null)}
+        />
+      )}
+
+      {pdfFormModal && (
+        <PdfFormModal
+          pdf={pdfFormModal.pdf}
+          onClose={() => setPdfFormModal(null)}
+          onSubmit={handlePdfFormSubmit}
+        />
+      )}
+
+      {pdfDeleteTarget && (
+        <ConfirmDialog
+          title="Delete PDF"
+          message="Remove this PDF and its image? This can't be undone."
+          onConfirm={handlePdfDelete}
+          onClose={() => setPdfDeleteTarget(null)}
         />
       )}
     </div>

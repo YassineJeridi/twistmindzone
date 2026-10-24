@@ -9,6 +9,8 @@ import { fileURLToPath } from "url";
 
 import authRoutes from "./routes/auth.js";
 import videoRoutes from "./routes/videos.js";
+import pdfRoutes from "./routes/pdfs.js";
+import apiRoutes from "./routes/api.js";
 import { uploadsDir } from "./middleware/upload.js";
 
 dotenv.config();
@@ -22,6 +24,8 @@ app.use("/uploads", express.static(uploadsDir));
 
 app.use("/api/auth", authRoutes);
 app.use("/api/videos", videoRoutes);
+app.use("/api/pdfs", pdfRoutes);
+app.use("/api/v1", apiRoutes);
 
 app.get("/api/health", (req, res) => res.json({ status: "ok" }));
 

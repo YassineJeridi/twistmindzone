@@ -54,6 +54,12 @@ Then visit `http://localhost:5001`.
   can change it.
 - Cards with a green border and "Paid" badge are marked as paid; grey border means unpaid.
 
+## External API
+
+`/api/v1` gives other Redix apps (e.g. the REDIX dashboard) full read/write access to videos
+and PDFs using an `X-API-Key` header (`API_KEY` in `server/.env`). See
+[`server/API.md`](server/API.md).
+
 ## Project structure
 
 ```
